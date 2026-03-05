@@ -16,22 +16,26 @@ export function AttendancePage() {
     eventName,
   })
 
-  const recordsMap = new Map(
+  const [recordsMap, setRecordsMap] = useState(new Map(
     (attendanceData?.records ?? []).map((r) => [r.member_id, r]),
-  )
+  ))
 
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
   async function handleToggle(memberId: string, checked: boolean) {
     const existing = recordsMap.get(memberId)
-    recordsMap.set(memberId, {
-      attendance_id: existing?.attendance_id ?? `${date}-${memberId}`,
-      date,
-      event_name: eventName,
-      member_id: memberId,
-      present: checked,
-      notes: existing?.notes ?? '',
+    setRecordsMap(prev => {
+      const newMap = new Map(prev);
+      newMap.set(memberId, {
+        attendance_id: existing?.attendance_id ?? `${date}-${memberId}`,
+        date,
+        event_name: eventName,
+        member_id: memberId,
+        present: checked,
+        notes: existing?.notes ?? '',
+      })
+      return newMap;
     })
   }
 
