@@ -1,10 +1,9 @@
-import { FormEvent, useState } from 'react'
-import {
-  FinanceType,
-  type FinanceEntry,
-} from '../types/domain'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import type { FinanceType, FinanceEntry } from '../types/domain'
 import { useFinanceByMonth } from '../hooks/useFinanceByMonth'
 import { createFinanceEntry } from '../api/client'
+import type { CreateFinanceEntryRequest } from '../types/api'
 
 function getCurrentMonth() {
   const d = new Date()
@@ -27,17 +26,15 @@ export function FinancePage() {
     if (!amount) return
     setSaving(true)
     try {
-      await createFinanceEntry({
-        finance_id: '',
+      const payload: CreateFinanceEntryRequest = {
         entry_date: entryDate,
         month,
         type,
         amount: Number(amount),
         category,
         notes,
-        created_at: '',
-        updated_at: '',
-      } as FinanceEntry)
+      }
+      await createFinanceEntry(payload)
       setAmount('')
       setNotes('')
       await refetch()
@@ -46,7 +43,7 @@ export function FinancePage() {
     }
   }
 
-  const entries = data?.entries ?? []
+  const entries = (data?.entries ?? []) as FinanceEntry[]
   const summary = data?.summary
 
   return (

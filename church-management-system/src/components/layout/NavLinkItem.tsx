@@ -1,6 +1,6 @@
-import { NavLink, NavLinkProps } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 
-type Props = Omit<NavLinkProps, 'className'>
+type Props = Omit<React.ComponentProps<typeof NavLink>, 'className'>
 
 export function NavLinkItem(props: Props) {
   return (
