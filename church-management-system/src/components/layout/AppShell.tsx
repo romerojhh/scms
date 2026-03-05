@@ -1,5 +1,4 @@
 import { ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
 import { NavLinkItem } from './NavLinkItem'
 
 type AppShellProps = {
