@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useMembers } from '../hooks/useMembers'
 import { useAttendanceByDate } from '../hooks/useAttendanceByDate'
 import { saveAttendance } from '../api/client'
@@ -19,6 +19,8 @@ export function AttendancePage() {
   const [recordsMap, setRecordsMap] = useState(new Map())
 
   const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const messageTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     setRecordsMap(new Map(
@@ -26,7 +28,21 @@ export function AttendancePage() {
     ))
   }, [attendanceData])
 
-  const [message, setMessage] = useState<string | null>(null)
+  useEffect(() => {
+    if (message) {
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current)
+      }
+      messageTimeoutRef.current = window.setTimeout(() => {
+        setMessage(null)
+      }, 2000)
+    }
+    return () => {
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current)
+      }
+    }
+  }, [message])
 
   async function handleToggle(memberId: string, checked: boolean) {
     const existing = recordsMap.get(memberId)
