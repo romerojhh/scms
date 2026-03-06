@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useMembers } from '../hooks/useMembers'
 import { useAttendanceByDate } from '../hooks/useAttendanceByDate'
 import { saveAttendance } from '../api/client'
@@ -21,6 +21,8 @@ export function AttendancePage() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const messageTimeoutRef = useRef<number | null>(null)
   const [selectAll, setSelectAll] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const tableContainerRef = useRef<HTMLDivElement>(null)
 
   const members = membersData?.items ?? []
   const totalMembers = members.length
@@ -124,6 +126,48 @@ export function AttendancePage() {
       return current !== original
     })
   }, [members, recordsMap, attendanceData])
+
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery.trim()) return members
+    const query = searchQuery.toLowerCase()
+    return members.filter(member =>
+      member.full_name.toLowerCase().includes(query)
+    )
+  }, [members, searchQuery])
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }
+
+  const clearSearch = () => {
+    setSearchQuery('')
+  }
+
+  const scrollToMember = useCallback((memberId: string) => {
+    const element = document.getElementById(`member-row-${memberId}`)
+    if (element && tableContainerRef.current) {
+      const container = tableContainerRef.current
+      const elementTop = element.offsetTop
+      const containerHeight = container.clientHeight
+      const elementHeight = element.clientHeight
+      const scrollTo = elementTop - (containerHeight / 2) + (elementHeight / 2)
+      container.scrollTo({
+        top: Math.max(0, scrollTo),
+        behavior: 'smooth'
+      })
+      element.classList.add('bg-indigo-50')
+      setTimeout(() => {
+        element.classList.remove('bg-indigo-50')
+      }, 2000)
+    }
+  }, [])
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && filteredMembers.length > 0) {
+      const firstMember = filteredMembers[0]
+      scrollToMember(firstMember.member_id)
+    }
+  }
 
   const isLoading = membersLoading || attendanceLoading
 
@@ -230,38 +274,59 @@ export function AttendancePage() {
       <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="relative flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 transition-all hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
-                />
-                <span className="text-sm font-medium text-slate-700 group-hover:text-indigo-600 transition-colors">
-                  Select All
-                </span>
-              </label>
+            <div className="relative flex-1 max-w-md">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search members..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyDown}
+                className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-10 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
 
-              <div className="h-4 w-px bg-slate-300 sm:h-6" />
+            <div className="flex items-center gap-4 text-xs text-slate-500">
+              <div className="flex items-center gap-2">
+                <label className="relative flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 transition-all hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                  <span className="font-medium text-slate-700 group-hover:text-indigo-600 transition-colors">
+                    Select All
+                  </span>
+                </label>
+              </div>
 
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  <span className="text-xs text-slate-600">Present: <strong className="text-slate-900">{presentCount}</strong></span>
+                  <span><strong className="text-slate-900">{presentCount}</strong> present</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-                  <span className="text-xs text-slate-600">Absent: <strong className="text-slate-900">{absentCount}</strong></span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
-                  <span className="text-xs text-slate-600">Total: <strong className="text-slate-900">{totalMembers}</strong></span>
+                  <span><strong className="text-slate-900">{absentCount}</strong> absent</span>
                 </div>
               </div>
-            </div>
 
-            <div className="text-xs text-slate-500">
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
@@ -271,13 +336,13 @@ export function AttendancePage() {
                   <span>Loading...</span>
                 </div>
               ) : (
-                <span>{totalMembers} member{totalMembers !== 1 ? 's' : ''}</span>
+                <span>{totalMembers} total</span>
               )}
             </div>
           </div>
         </div>
 
-        <div className="max-h-[480px] overflow-y-auto">
+        <div className="max-h-[480px] overflow-y-auto" ref={tableContainerRef}>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -305,12 +370,13 @@ export function AttendancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {members.map((member) => {
+                {filteredMembers.map((member) => {
                   const record = recordsMap.get(member.member_id)
                   const checked = record?.present ?? false
                   return (
                     <tr
                       key={member.member_id}
+                      id={`member-row-${member.member_id}`}
                       className="transition-colors hover:bg-slate-100"
                     >
                       <td className="px-4 py-3 sm:px-6">
