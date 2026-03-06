@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMembers } from '../hooks/useMembers'
 import { useAttendanceByDate } from '../hooks/useAttendanceByDate'
 import { saveAttendance } from '../api/client'
@@ -16,11 +16,16 @@ export function AttendancePage() {
     eventName,
   })
 
-  const [recordsMap, setRecordsMap] = useState(new Map(
-    (attendanceData?.records ?? []).map((r) => [r.member_id, r]),
-  ))
+  const [recordsMap, setRecordsMap] = useState(new Map())
 
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setRecordsMap(new Map(
+      (attendanceData?.records ?? []).map((r) => [r.member_id, r]),
+    ))
+  }, [attendanceData])
+
   const [message, setMessage] = useState<string | null>(null)
 
   async function handleToggle(memberId: string, checked: boolean) {
@@ -79,7 +84,10 @@ export function AttendancePage() {
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => { 
+                setDate(e.target.value)
+                refetch()
+              }}
               className="rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
             />
           </div>
